@@ -1,0 +1,8 @@
+EbookLib
+BeautifulSoup4
+pydub
+openai-whisper
+thefuzz
+tqdm
+streamlit
+pandas

@@ -1,0 +1,16 @@
+# Python
+venv/
+__pycache__/
+.DS_Store
+output/
+
+# Input media files
+*.epub
+*.mp4
+*.m4a
+*.mp3
+*.m4b
+*.wav
+
+# AI Agent Files
+plan.md
