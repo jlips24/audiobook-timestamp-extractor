@@ -1,27 +1,40 @@
 import os
 import subprocess
 import whisper
+import platform
+import sys
 from thefuzz import fuzz
 from .models import Chapter
-from .utils import get_logger
+from .utils import get_logger, seconds_to_hms
 
 logger = get_logger(__name__)
 
+# Try to import mlx_whisper if on Apple Silicon
+HAS_MLX = False
+if platform.system() == "Darwin" and platform.machine() == "arm64":
+    try:
+        import mlx_whisper
+        HAS_MLX = True
+        logger.info("MLX-Whisper detected. Using hardware acceleration 🚀")
+    except ImportError:
+        logger.info("Apple Silicon detected but mlx-whisper not installed. Using standard CPU.")
+
 class AudioAnalyzer:
-    def __init__(self, audio_path: str, model_size="base"):
+    def __init__(self, audio_path: str, model_size="medium"):
         self.audio_path = audio_path
         self.model_size = model_size
         self._model = None
+        self.use_mlx = HAS_MLX
 
     @property
     def model(self):
-        """Lazy load the Whisper model."""
-        if self._model is None:
+        """Lazy load the Whisper model (only for standard backend)."""
+        if self._model is None and not self.use_mlx:
             logger.info(f"Loading Whisper model ('{self.model_size}')...")
             self._model = whisper.load_model(self.model_size)
         return self._model
 
-    def find_chapter_linear(self, chapter: Chapter, start_search_time: float, max_search_duration=1800, min_confidence=80) -> bool:
+    def find_chapter_linear(self, chapter: Chapter, start_search_time: float, max_search_duration=2700, min_confidence=90) -> bool:
         """
         Scans forward from start_search_time in chunks to find the chapter.
         Returns True if found, False if end of file reached or max search exceeded.
@@ -34,7 +47,8 @@ class AudioAnalyzer:
         
         search_limit = min(total_duration, start_search_time + max_search_duration)
         
-        logger.info(f"Scanning Chapter {chapter.index} starting at {int(current_time)}s...")
+        logger.info(f"Scanning Chapter {chapter.index} starting at {seconds_to_hms(int(current_time))}...")
+        logger.info(f"Searching for: {chapter.search_phrase}")
         
         temp_file = "temp_scan.wav"
         chunk_count = 0
@@ -48,7 +62,9 @@ class AudioAnalyzer:
                 break
 
             # Extract Chunk
-            logger.info(f"Scanning chunk {chunk_count}: {int(current_time)}s - {int(end_time)}...")
+            logger.info(
+                f"Scanning chunk {chunk_count}: {seconds_to_hms(int(current_time))} - {seconds_to_hms(int(end_time))}..."
+            )
             
             cmd = [
                 "ffmpeg", "-y",
@@ -68,31 +84,71 @@ class AudioAnalyzer:
                 return False
 
             # Transcribe
-            model = self.model
-            result = model.transcribe(temp_file, language="en", no_speech_threshold=0.6)
+            result = None
+            if self.use_mlx:
+                # Map model size to mlx-community repo if needed, or let it auto-resolve standard names
+                # mlx_whisper usually handles standard names by mapping to default mlx conversions
+                try:
+                    # no_speech_threshold arg is supported in mlx_whisper.transcribe generally
+                    result = mlx_whisper.transcribe(
+                        temp_file, 
+                        path_or_hf_repo=f"mlx-community/whisper-{self.model_size}-mlx",
+                        no_speech_threshold=0.6,
+                        language="en"
+                    )
+                except Exception as e:
+                    logger.error(f"MLX Transcription failed: {e}. Falling back to standard.")
+                    self.use_mlx = False
+            
+            if not self.use_mlx:
+                model = self.model
+                result = model.transcribe(temp_file, language="en", no_speech_threshold=0.6)
             
             best_ratio = 0
             best_segment_time = None
             search_phrase = chapter.search_phrase.lower()
             
             # Fuzzy Match in this chunk
-            for segment in result['segments']:
-                text = segment['text'].lower()
-                ratio = fuzz.partial_ratio(search_phrase, text)
+            segments = result.get('segments', []) if isinstance(result, dict) else result
+            # Ensure compatibility: mlx output might behave slightly differently but usually returns dict
+            
+            for segment in segments:
+                text = segment['text'].lower().strip()
+                if not text:
+                    continue
+
+                # SCORING STRATEGY: Start-Bias Weighted Score
+                # 1. Partial Ratio: How well 'text' matches *anywhere* in 'search_phrase'.
+                #    (High for both "Chapter 1" and "Tally")
+                p_ratio = fuzz.partial_ratio(search_phrase, text)
                 
-                if ratio > best_ratio:
-                    best_ratio = ratio
-                    # Absolute time = Chunk Start + Segment Start
+                # 2. Start Ratio: How well 'text' matches the *start* of 'search_phrase'.
+                #    (High for "Chapter 1", Low for "Tally")
+                #    We compare 'text' against the prefix of 'search_phrase' of the same length.
+                prefix_len = len(text)
+                target_prefix = search_phrase[:prefix_len]
+                s_ratio = fuzz.ratio(target_prefix, text)
+                
+                # Combine: 70% Partial (Robustness) + 30% Start (Positioning)
+                # This penalizes matches deep in the paragraph without strictly rejecting 
+                # slight mismatches at the start.
+                final_score = (0.7 * p_ratio) + (0.3 * s_ratio)
+                
+                if final_score > best_ratio:
+                    best_ratio = final_score
                     best_segment_time = current_time + segment['start']
+                
+                if p_ratio > 80:
+                     logger.debug(f"Candidate: '{text[:20]}...' | Partial: {p_ratio} | Start: {s_ratio} | Final: {int(final_score)}")
                     
-                if ratio > 60:
-                     logger.debug(f"Match {ratio}% at {int(current_time + segment['start'])}s: {text[:30]}...")
+                if final_score > 60:
+                     logger.debug(f"Match {int(final_score)}% at {int(current_time + segment['start'])}s: {text[:30]}...")
 
             # Check if found
             if best_ratio >= min_confidence:
                 chapter.confirmed_time = best_segment_time
                 chapter.status = "FOUND"
-                logger.info(f"CONFIRMED Chapter {chapter.index} at {best_segment_time:.2f}s (Score: {best_ratio})")
+                logger.info(f"CONFIRMED Chapter {chapter.index} at {seconds_to_hms(int(best_segment_time))} (Score: {best_ratio})")
                 
                 if os.path.exists(temp_file):
                     os.remove(temp_file)

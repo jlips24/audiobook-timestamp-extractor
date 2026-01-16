@@ -83,7 +83,7 @@ class EpubParser:
                 status="PENDING"
             )
             self.chapters.append(chap)
-            logger.info(f"Found Candidate: {chap.index} - {chap.toc_title}")
+            # logger.info(f"Found Candidate: {chap.index} - {chap.toc_title}")
             chapter_index += 1
             
         return self.chapters
@@ -125,14 +125,59 @@ class EpubParser:
         
         if not valid_paragraphs:
             return "", ""
-            
-        primary = valid_paragraphs[0][:150] # Limit length
+        
+        paragraph_length_limit = 150
+        primary = self._safe_truncate(valid_paragraphs[0], paragraph_length_limit)
         secondary = ""
         
         if len(primary) < 50 and len(valid_paragraphs) > 1:
             # Combine if first is short
-            primary = (valid_paragraphs[0] + " " + valid_paragraphs[1])[:150]
+            combined = valid_paragraphs[0] + " " + valid_paragraphs[1]
+            primary = self._safe_truncate(combined, paragraph_length_limit)
         elif len(valid_paragraphs) > 1:
-            secondary = valid_paragraphs[1][:150]
+            secondary = self._safe_truncate(valid_paragraphs[1], paragraph_length_limit)
             
         return primary, secondary
+
+    def _safe_truncate(self, text: str, limit: int) -> str:
+        """
+        Truncates text to limit, but extends to the next whitespace 
+        to avoid cutting words in half.
+        """
+        if len(text) <= limit:
+            return text
+            
+        # If the character at limit is a space, simply cut there (or trim)
+        # Actually simplest is: scan from limit forward until space or end
+        end = limit
+        while end < len(text) and not text[end].isspace():
+            end += 1
+            
+        return text[:end]
+
+    def get_metadata(self) -> dict:
+        """
+        Extracts metadata (Author, Title) from the EPUB.
+        Returns a dictionary with 'author' and 'title'.
+        """
+        if not self.book:
+            self.load()
+            
+        # Helper to get DC text safely
+        def get_dc(name):
+            try:
+                # ebooklib uses get_metadata('DC', 'name') returning a list of tuples usually
+                items = self.book.get_metadata('DC', name)
+                if items and len(items) > 0:
+                    return items[0][0]
+            except Exception:
+                pass
+            return "Unknown"
+
+        title = get_dc('title')
+        author = get_dc('creator')
+        
+        return {
+            "title": title,
+            "author": author
+        }

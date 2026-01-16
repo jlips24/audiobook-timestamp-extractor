@@ -23,10 +23,9 @@ ENV PYTHONPATH="${PYTHONPATH}:/app"
 # Copy source code
 COPY src/ src/
 COPY input/ input/
-COPY .streamlit/ .streamlit/
 
-# Expose Streamlit port
-EXPOSE 8501
-
-# Run the app
-CMD ["streamlit", "run", "src/app.py", "--server.address=0.0.0.0"]
+# Logic to run the CLI by default or keep container alive?
+# Since we removed the app, let's make the entrypoint bash or python main
+# User likely wants to run commands against it.
+ENTRYPOINT ["python3", "-m", "src.main"]
+CMD ["--help"]

@@ -7,6 +7,7 @@ class TestAudioAnalyzer(unittest.TestCase):
 
     def setUp(self):
         self.analyzer = AudioAnalyzer("dummy.m4b")
+        self.analyzer.use_mlx = False # Force disable MLX for unit tests to ensure mocks are used
 
     @patch('src.audio_analyzer.whisper.load_model')
     @patch('src.audio_analyzer.subprocess.run')
@@ -70,6 +71,73 @@ class TestAudioAnalyzer(unittest.TestCase):
         with patch.object(self.analyzer, 'get_duration', return_value=3600.0):
             result = self.analyzer.find_chapter_linear(chapter, 0.0)
             self.assertFalse(result)
+
+    def test_start_bias_scoring(self):
+        """
+        Test that Start-Bias scoring prefers matches at the beginning of the phrase.
+        """
+        # Search Phrase: "Eight hundred... I never knew the tally"
+        phrase = "Eight hundred and thirty-three men. I wish I never knew the tally."
+        chapter = Chapter(index=1, toc_title="Test", search_phrase=phrase, status="PENDING")
+        self.analyzer.use_mlx = False
+        
+        with patch.object(self.analyzer, 'get_duration', return_value=3600.0), \
+             patch('src.audio_analyzer.whisper.load_model') as mock_load, \
+             patch('src.audio_analyzer.subprocess.run'), \
+             patch('src.audio_analyzer.os.path.exists', return_value=True), \
+             patch('src.audio_analyzer.os.remove'):
+             
+             mock_model = MagicMock()
+             mock_load.return_value = mock_model
+             
+             # Segment 1: "I never knew the tally" (Middle. Partial=100. Start=Low)
+             # Segment 2: "Eight hundred" (Start. Partial=100. Start=100)
+             
+             mock_model.transcribe.return_value = {
+                 'segments': [
+                     {'text': 'I never knew the tally', 'start': 10.0},
+                     {'text': 'Eight hundred and thirty', 'start': 20.0}
+                 ]
+             }
+             
+             found = self.analyzer.find_chapter_linear(chapter, 0.0)
+             self.assertTrue(found)
+             # Should pick 20.0 because it has a better Final Score
+             self.assertEqual(chapter.confirmed_time, 20.0)
+
+    def test_start_bias_resilience(self):
+        """
+        Test that Start-Bias still accepts slightly imperfect starts (e.g. missing 'The')
+        """
+        phrase = "The quick brown fox jumps."
+        chapter = Chapter(index=1, toc_title="Test", search_phrase=phrase, status="PENDING")
+        self.analyzer.use_mlx = False
+        
+        with patch.object(self.analyzer, 'get_duration', return_value=3600.0), \
+             patch('src.audio_analyzer.whisper.load_model') as mock_load, \
+             patch('src.audio_analyzer.subprocess.run'), \
+             patch('src.audio_analyzer.os.path.exists', return_value=True), \
+             patch('src.audio_analyzer.os.remove'):
+             
+             mock_model = MagicMock()
+             mock_load.return_value = mock_model
+             
+             # "Quick brown fox" (Missing "The"). 
+             # Partial = 100. Start = Decent (not 0).
+             # Should still be > 90 (or whatever min_confidence is, default 90 might be tight, let's say > 80)
+             # 0.7*100 + 0.3*ratio("The quick", "quick bro")
+             
+             mock_model.transcribe.return_value = {
+                 'segments': [{'text': 'Quick brown fox', 'start': 5.0}]
+             }
+             
+             # Using default min_confidence=90 might be risky if start ratio drops too low.
+             # Let's see if it passes with 90 or if we need to adjust min_confidence expectation.
+             # Actually "Quick brown fox" vs "The quick brown" ratio is ~73.
+             # 70 + 22 = 92. Should pass 90.
+             
+             found = self.analyzer.find_chapter_linear(chapter, 0.0)
+             self.assertTrue(found)
 
 if __name__ == "__main__":
     unittest.main()

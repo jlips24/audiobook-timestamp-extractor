@@ -2,6 +2,12 @@ import logging
 import sys
 import warnings
 
+def seconds_to_hms(seconds: int) -> str:
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    seconds = seconds % 60
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
 def setup_logging(level=logging.INFO):
     """Configures the root logger with a standard format."""
     logging.basicConfig(
