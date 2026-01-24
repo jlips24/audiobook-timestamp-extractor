@@ -24,3 +24,6 @@ def setup_logging(level=logging.INFO):
 
 def get_logger(name: str):
     return logging.getLogger(name)
+
+def sanitize(s: str) -> str:
+    return "".join(c for c in s if c.isalnum() or c in (' ', '-', '_')).strip()

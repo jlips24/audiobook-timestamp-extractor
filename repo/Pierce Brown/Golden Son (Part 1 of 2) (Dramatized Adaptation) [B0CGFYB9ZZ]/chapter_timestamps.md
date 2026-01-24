@@ -1,10 +1,11 @@
 # Chapter Timestamps
-**Book:** Golden Son
+**Book:** GGolden Son (Part 1 of 2) (Dramatized Adaptation)
 **Author:** Pierce Brown
+**Audible ID:** B0CGFYB9ZZ
 
 | Chapter | Start Time | Seconds |
 | :--- | :--- | :--- |
-| Intro | 00:00:00 | 0.0 |
+| Intro | 00:00:00 | 0 |
 | Prologue | 00:00:39 | 39 |
 | 1: Warlords | 00:03:13 | 193 |
 | 2: The Breach | 00:16:12 | 972 |

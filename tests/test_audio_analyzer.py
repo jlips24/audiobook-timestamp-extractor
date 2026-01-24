@@ -6,8 +6,15 @@ from src.models import Chapter
 class TestAudioAnalyzer(unittest.TestCase):
 
     def setUp(self):
-        self.analyzer = AudioAnalyzer("dummy.m4b")
-        self.analyzer.use_mlx = False # Force disable MLX for unit tests to ensure mocks are used
+        # Prevent real model downloads/directory creation
+        with patch('src.audio_analyzer.AudioAnalyzer._ensure_model_available') as mock_ensure, \
+             patch('os.makedirs'):
+            self.analyzer = AudioAnalyzer("dummy.m4b")
+            self.analyzer.use_mlx = False # Force disable MLX for unit tests
+            
+            # Manually set attributes that _ensure_model_available would have set
+            self.analyzer.download_root = "/tmp/dummy_models"
+            self.analyzer.models_dir = "/tmp/dummy_models_dir"
 
     @patch('src.audio_analyzer.whisper.load_model')
     @patch('src.audio_analyzer.subprocess.run')

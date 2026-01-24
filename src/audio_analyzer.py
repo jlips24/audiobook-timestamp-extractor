@@ -25,13 +25,47 @@ class AudioAnalyzer:
         self.model_size = model_size
         self._model = None
         self.use_mlx = HAS_MLX
+        
+        # Setup local models directory
+        self.models_dir = os.path.join(os.getcwd(), "models")
+        os.makedirs(self.models_dir, exist_ok=True)
+        
+        self._ensure_model_available()
+
+    def _ensure_model_available(self):
+        """Ensures the appropriate model is downloaded to the local models directory."""
+        if self.use_mlx:
+            from huggingface_hub import snapshot_download
+            
+            repo_id = f"mlx-community/whisper-{self.model_size}-mlx"
+            local_model_dir = os.path.join(self.models_dir, "mlx-community", f"whisper-{self.model_size}-mlx")
+            
+            if not os.path.exists(local_model_dir):
+                logger.info(f"Downloading MLX model '{repo_id}' to {local_model_dir}...")
+                try:
+                    snapshot_download(repo_id=repo_id, local_dir=local_model_dir)
+                    logger.info("MLX model download complete.")
+                except Exception as e:
+                    logger.error(f"Failed to download MLX model: {e}")
+                    # You might want to fallback to CPU or raise error here
+            else:
+                logger.info(f"Using cached MLX model from {local_model_dir}")
+                
+            self.model_path = local_model_dir
+        else:
+            # Standard Whisper
+            # whisper.load_model will use the download_root if specified
+            self.download_root = os.path.join(self.models_dir, "openai")
+            os.makedirs(self.download_root, exist_ok=True)
+            logger.info(f"Standard Whisper model will be cached in {self.download_root}")
 
     @property
     def model(self):
         """Lazy load the Whisper model (only for standard backend)."""
         if self._model is None and not self.use_mlx:
             logger.info(f"Loading Whisper model ('{self.model_size}')...")
-            self._model = whisper.load_model(self.model_size)
+            # This triggers download if not in download_root
+            self._model = whisper.load_model(self.model_size, download_root=self.download_root)
         return self._model
 
     def find_chapter_linear(self, chapter: Chapter, start_search_time: float, max_search_duration=2700, min_confidence=90) -> bool:
@@ -48,7 +82,7 @@ class AudioAnalyzer:
         search_limit = min(total_duration, start_search_time + max_search_duration)
         
         logger.info(f"Scanning Chapter {chapter.index} starting at {seconds_to_hms(int(current_time))}...")
-        logger.info(f"Searching for: {chapter.search_phrase}")
+        # logger.info(f"Searching for: {chapter.search_phrase}")
         
         temp_file = "temp_scan.wav"
         chunk_count = 0
@@ -92,13 +126,16 @@ class AudioAnalyzer:
                     # no_speech_threshold arg is supported in mlx_whisper.transcribe generally
                     result = mlx_whisper.transcribe(
                         temp_file, 
-                        path_or_hf_repo=f"mlx-community/whisper-{self.model_size}-mlx",
+                        path_or_hf_repo=self.model_path,
                         no_speech_threshold=0.6,
                         language="en"
                     )
                 except Exception as e:
                     logger.error(f"MLX Transcription failed: {e}. Falling back to standard.")
                     self.use_mlx = False
+                    # IMPORTANT: If we fallback, we need to setup standard model caching
+                    self.download_root = os.path.join(self.models_dir, "openai")
+                    os.makedirs(self.download_root, exist_ok=True)
             
             if not self.use_mlx:
                 model = self.model
@@ -148,7 +185,7 @@ class AudioAnalyzer:
             if best_ratio >= min_confidence:
                 chapter.confirmed_time = best_segment_time
                 chapter.status = "FOUND"
-                logger.info(f"CONFIRMED Chapter {chapter.index} at {seconds_to_hms(int(best_segment_time))} (Score: {best_ratio})")
+                logger.info(f"CONFIRMED Chapter {chapter.index} at {seconds_to_hms(int(best_segment_time))} (Score: {best_ratio:.2f})")
                 
                 if os.path.exists(temp_file):
                     os.remove(temp_file)
