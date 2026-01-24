@@ -18,6 +18,14 @@ test:
 		PYTHONPATH=. pytest --cov=src tests/; \
 	fi
 
+lint:
+	@echo "Running linting..."
+	if [ -d "venv" ]; then \
+		source venv/bin/activate && isort src tests && flake8 src tests; \
+	else \
+		isort src tests && flake8 src tests; \
+	fi
+
 run-local:
 	@echo "Running locally..."
 	$(PYTHON) -m src.main --help

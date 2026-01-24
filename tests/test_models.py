@@ -1,5 +1,7 @@
 import unittest
+
 from src.models import Chapter
+
 
 class TestChapter(unittest.TestCase):
     def test_chapter_initialization(self):
@@ -25,6 +27,7 @@ class TestChapter(unittest.TestCase):
         self.assertIn("Chapter 5", str(chap))
         self.assertIn("Status=FOUND", str(chap))
         self.assertIn("Time=120.5", str(chap))
+
 
 if __name__ == "__main__":
     unittest.main()

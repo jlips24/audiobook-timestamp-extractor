@@ -6,3 +6,5 @@ huggingface_hub
 mlx-whisper; sys_platform == 'darwin' and platform_machine == 'arm64'
 pytest
 pytest-cov
+isort
+flake8

@@ -1,11 +1,13 @@
-import ebooklib
-from ebooklib import epub
-from bs4 import BeautifulSoup
 from typing import List
+
+from bs4 import BeautifulSoup
+from ebooklib import epub
+
 from .models import Chapter
 from .utils import get_logger
 
 logger = get_logger(__name__)
+
 
 class EpubParser:
     def __init__(self, epub_path: str):
@@ -33,41 +35,41 @@ class EpubParser:
             self.load()
 
         logger.info("Parsing Table of Contents...")
-        
+
         # Flatten the TOC (it can be nested)
         # ebooklib TOC items are either epub.Link, epub.Section, or tuple/list
         flat_toc = self._flatten_toc(self.book.toc)
-        
-        chapter_index = 1 # Start at 1, 0 reserved for potential Intro
-        
+
+        chapter_index = 1  # Start at 1, 0 reserved for potential Intro
+
         for item in flat_toc:
             # We only care about Links that point to actual content
             if not isinstance(item, epub.Link):
                 continue
-                
-            href = item.href.split('#')[0] # Remove anchors
+
+            href = item.href.split('#')[0]  # Remove anchors
             title = item.title
-            
+
             # Find the actual item in the book
             doc = self.book.get_item_with_href(href)
             if not doc:
                 logger.warning(f"TOC Link '{title}' points to missing href: {href}")
                 continue
-                
+
             # Parse content
             soup = BeautifulSoup(doc.get_content(), 'html.parser')
-            
+
             # Heuristic: Check word count to filter out Images / Empty pages
             text_content = soup.get_text()
             word_count = len(text_content.split())
-            
+
             if word_count < 50:
                 logger.debug(f"Skipping '{title}': Word count {word_count} < 50")
                 continue
-                
+
             # Extract Search Phrase
             phrase, alt_phrase = self._extract_search_phrases(soup)
-            
+
             if not phrase:
                 logger.warning(f"Could not extract phrase for '{title}'")
                 continue
@@ -79,13 +81,13 @@ class EpubParser:
                 search_phrase=phrase,
                 alternate_phrase=alt_phrase,
                 word_count=word_count,
-                word_offset=0, # To be calculated later
+                word_offset=0,  # To be calculated later
                 status="PENDING"
             )
             self.chapters.append(chap)
             # logger.info(f"Found Candidate: {chap.index} - {chap.toc_title}")
             chapter_index += 1
-            
+
         return self.chapters
 
     def _flatten_toc(self, toc):
@@ -93,15 +95,15 @@ class EpubParser:
         flat = []
         for item in toc:
             if isinstance(item, (list, tuple)):
-                 # Section tuple (SectionTitle, [Children])
-                 # We generally care about the children
-                 # Depending on ebooklib version, structure varies
-                 # Recursively add children
-                 for sub in item:
-                     if isinstance(sub, list):
-                         flat.extend(self._flatten_toc(sub))
-                     else:
-                         flat.append(sub)
+                # Section tuple (SectionTitle, [Children])
+                # We generally care about the children
+                # Depending on ebooklib version, structure varies
+                # Recursively add children
+                for sub in item:
+                    if isinstance(sub, list):
+                        flat.extend(self._flatten_toc(sub))
+                    else:
+                        flat.append(sub)
             else:
                 flat.append(item)
         return flat
@@ -114,45 +116,45 @@ class EpubParser:
         # Remove headers
         for header in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
             header.decompose()
-            
+
         paragraphs = soup.find_all('p')
         valid_paragraphs = []
-        
+
         for p in paragraphs:
             text = p.get_text(strip=True)
-            if len(text) > 20: # Arbitrary filter for "Chapter 1" text in <p>
+            if len(text) > 20:  # Arbitrary filter for "Chapter 1" text in <p>
                 valid_paragraphs.append(text)
-        
+
         if not valid_paragraphs:
             return "", ""
-        
+
         paragraph_length_limit = 150
         primary = self._safe_truncate(valid_paragraphs[0], paragraph_length_limit)
         secondary = ""
-        
+
         if len(primary) < 50 and len(valid_paragraphs) > 1:
             # Combine if first is short
             combined = valid_paragraphs[0] + " " + valid_paragraphs[1]
             primary = self._safe_truncate(combined, paragraph_length_limit)
         elif len(valid_paragraphs) > 1:
             secondary = self._safe_truncate(valid_paragraphs[1], paragraph_length_limit)
-            
+
         return primary, secondary
 
     def _safe_truncate(self, text: str, limit: int) -> str:
         """
-        Truncates text to limit, but extends to the next whitespace 
+        Truncates text to limit, but extends to the next whitespace
         to avoid cutting words in half.
         """
         if len(text) <= limit:
             return text
-            
+
         # If the character at limit is a space, simply cut there (or trim)
         # Actually simplest is: scan from limit forward until space or end
         end = limit
         while end < len(text) and not text[end].isspace():
             end += 1
-            
+
         return text[:end]
 
     def get_metadata(self) -> dict:
@@ -162,7 +164,7 @@ class EpubParser:
         """
         if not self.book:
             self.load()
-            
+
         # Helper to get DC text safely
         def get_dc(name):
             try:
@@ -176,7 +178,7 @@ class EpubParser:
 
         title = get_dc('title')
         author = get_dc('creator')
-        
+
         return {
             "title": title,
             "author": author
