@@ -4,8 +4,17 @@ from src.output_manager import save_results
 from src.models import Chapter
 import json
 import pathlib
+import shutil
+import os
 
 class TestOutputManager(unittest.TestCase):
+
+    def tearDown(self):
+        # Clean up any potential artifacts from tests
+        dirs_to_clean = ["repo/Auth", "repo/TestAuthor"]
+        for d in dirs_to_clean:
+            if os.path.exists(d):
+                shutil.rmtree(d)
 
     @patch('src.output_manager.subprocess.run')
     @patch('src.output_manager.pathlib.Path.mkdir')
