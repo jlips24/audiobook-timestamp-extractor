@@ -55,6 +55,22 @@ If the initial scan misses some chapters, you can re-run the tool in "Find Missi
 python3 -m src.main "path/to/book.epub" "path/to/audio.m4b" --find-missing
 ```
 
+### Sync Utilities
+
+You can manually edit the Markdown file and sync changes back to JSON, or vice versa. These commands do not require file arguments; they will prompt for the Audible ID to locate the project.
+
+- **Markdown to JSON**:
+  ```bash
+  python3 -m src.main --sync-md-to-json
+  ```
+  Useful if you corrected timestamps in the Markdown table and want to update the machine-readable JSON.
+
+- **JSON to Markdown**:
+  ```bash
+  python3 -m src.main --sync-json-to-md
+  ```
+  Useful if the Markdown file is corrupted or missing and you want to regenerate it from the JSON source.
+
 ## Testing
 
 To run the unit test suite:
