@@ -1,7 +1,8 @@
 import unittest
-from unittest.mock import MagicMock, patch, mock_open
+from unittest.mock import MagicMock, patch, call
 import pathlib
-from src.find_missing import find_missing_chapters
+import sys
+from src.find_missing import find_missing_chapters, interactive_find_setup
 from src.models import Chapter
 
 class TestFindMissing(unittest.TestCase):
@@ -145,6 +146,74 @@ class TestFindMissing(unittest.TestCase):
                 self.assertTrue(200 <= start <= 210, f"Chapter 3 start {start} should follow Chap 2 (200)")
         
         self.assertTrue(found_chap_3_call)
+
+    @patch("src.find_missing.interactive_find_project_dir")
+    @patch("src.find_missing.parse_project_dir")
+    @patch("pathlib.Path.exists")
+    @patch("src.find_missing.find_missing_chapters")
+    @patch("sys.exit")
+    def test_interactive_find_setup_success(self, mock_exit, mock_find, mock_exists, mock_parse, mock_interactive):
+        # Setup
+        mock_project_dir = MagicMock()
+        mock_interactive.return_value = mock_project_dir
+        
+        mock_parse.return_value = ("Author", "Title", "ID")
+        
+        # Files exist
+        (mock_project_dir / "chapter_timestamps.json").exists.return_value = True
+        
+        # Run
+        interactive_find_setup(self.epub_parser, "audio.m4b")
+        
+        # Verify
+        mock_find.assert_called_with(self.epub_parser, "audio.m4b", "Author", "Title", "ID")
+        mock_exit.assert_not_called()
+
+    @patch("src.find_missing.interactive_find_project_dir")
+    @patch("sys.exit")
+    def test_interactive_find_setup_cancel(self, mock_exit, mock_interactive):
+        # User cancels at project selection
+        mock_interactive.return_value = None
+        
+        # Configure sys.exit to raise SystemExit so we don't continue execution in the function
+        mock_exit.side_effect = SystemExit
+        
+        with self.assertRaises(SystemExit):
+            interactive_find_setup(self.epub_parser, "audio.m4b")
+        
+        mock_exit.assert_called_with(1)
+
+    @patch("src.find_missing.get_output_dir")
+    @patch("src.find_missing.AudioAnalyzer")
+    @patch("src.find_missing.save_results")
+    @patch("src.find_missing.load_existing_timestamps")
+    @patch("pathlib.Path.exists")
+    def test_find_missing_no_gaps(self, mock_exists, mock_load_json, mock_save, mock_analyzer_cls, mock_get_output_dir):
+        # Scenario: All chapters are already FOUND in JSON.
+        mock_exists.return_value = True
+        mock_dir = MagicMock()
+        mock_get_output_dir.return_value = mock_dir
+        (mock_dir / "chapter_timestamps.json").exists.return_value = True
+        
+        # Mark all as found in JSON
+        mock_load_json.return_value = {
+            "Intro": 0.0,
+            "Chapter 1": 100.0,
+            "Chapter 2": 200.0,
+            "Chapter 3": 300.0,
+            "Outro": 400.0
+        }
+        
+        mock_analyzer = mock_analyzer_cls.return_value
+        # Should not need find_chapter calls
+        
+        find_missing_chapters(self.epub_parser, "dummy.m4b", "Author", "Title", "ID")
+        
+        # Verify no search calls
+        mock_analyzer.find_chapter_linear.assert_not_called()
+        
+        # Verify save called (even if no changes, it saves merged state)
+        mock_save.assert_called()
 
 if __name__ == '__main__':
     unittest.main()

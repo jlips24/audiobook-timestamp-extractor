@@ -1,6 +1,8 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, call
+import sys
 
+import pathlib
 from src.main import main
 from src.models import Chapter
 
@@ -31,7 +33,10 @@ class TestMainIntegration(unittest.TestCase):
         mock_args.return_value = MagicMock(
             epub="test.epub",
             audio="test.m4b",
-            verbose=False
+            verbose=False,
+            find_missing=False,
+            sync_md_to_json=False,
+            sync_json_to_md=False
         )
         # Files exist
         mock_exists.return_value = True
@@ -100,7 +105,14 @@ class TestMainIntegration(unittest.TestCase):
         mock_args
     ):
         """Test exit if no chapters found in EPUB."""
-        mock_args.return_value = MagicMock(epub="test.epub", audio="test.m4b", verbose=False)
+        mock_args.return_value = MagicMock(
+            epub="test.epub", 
+            audio="test.m4b", 
+            verbose=False,
+            find_missing=False,
+            sync_md_to_json=False,
+            sync_json_to_md=False
+        )
         mock_exists.return_value = True
 
         mock_parser_instance = MagicMock()
@@ -137,7 +149,14 @@ class TestMainIntegration(unittest.TestCase):
         mock_args
     ):
         """Test exit(0) if user ignores all chapters during verification."""
-        mock_args.return_value = MagicMock(epub="test.epub", audio="test.m4b", verbose=False)
+        mock_args.return_value = MagicMock(
+            epub="test.epub",
+            audio="test.m4b",
+            verbose=False,
+            find_missing=False,
+            sync_md_to_json=False,
+            sync_json_to_md=False
+        )
         mock_exists.return_value = True
 
         mock_parser_instance = MagicMock()
@@ -159,3 +178,81 @@ class TestMainIntegration(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    @patch('src.main.run_find_missing_mode')
+    @patch('src.main.argparse.ArgumentParser.parse_args')
+    @patch('src.main.sys.exit')
+    def test_main_route_to_find_missing(self, mock_exit, mock_args, mock_run_find):
+        """Test routing to run_find_missing_mode."""
+        mock_args.return_value = MagicMock(
+            epub="test.epub",
+            audio="test.m4b",
+            verbose=False,
+            find_missing=True,
+            sync_md_to_json=False,
+            sync_json_to_md=False
+        )
+        
+        main()
+        
+        mock_run_find.assert_called_once()
+        mock_exit.assert_called_with(0)
+
+    @patch('src.main.run_sync_mode')
+    @patch('src.main.argparse.ArgumentParser.parse_args')
+    @patch('src.main.sys.exit')
+    def test_main_route_to_sync(self, mock_exit, mock_args, mock_run_sync):
+        """Test routing to run_sync_mode."""
+        mock_args.return_value = MagicMock(
+            epub=None, audio=None, # Optional for sync
+            verbose=False,
+            find_missing=False,
+            sync_md_to_json=True,
+            sync_json_to_md=False
+        )
+        
+        main()
+        
+        mock_run_sync.assert_called_once()
+        mock_exit.assert_called_with(0)
+
+    @patch('src.main.interactive_find_setup')
+    @patch('src.main.EpubParser')
+    @patch('src.main.os.path.exists')
+    def test_run_find_missing_mode(self, mock_exists, mock_parser_cls, mock_interactive):
+        """Test run_find_missing_mode logic."""
+        from src.main import run_find_missing_mode
+        args = MagicMock(epub="test.epub", audio="test.m4b")
+        mock_exists.return_value = True
+        
+        run_find_missing_mode(args)
+        
+        mock_parser_cls.assert_called_with("test.epub")
+        mock_interactive.assert_called_with(mock_parser_cls.return_value, "test.m4b")
+
+    @patch('src.main.sync_md_to_json')
+    @patch('src.main.interactive_find_project_dir')
+    def test_run_sync_mode_md_to_json(self, mock_interactive, mock_sync):
+        """Test run_sync_mode for MD -> JSON."""
+        from src.main import run_sync_mode
+        args = MagicMock(sync_md_to_json=True, sync_json_to_md=False)
+        
+        mock_interactive.return_value = pathlib.Path("repo/Project")
+        
+        run_sync_mode(args)
+        
+        mock_interactive.assert_called_once()
+        mock_sync.assert_called_with(pathlib.Path("repo/Project"))
+
+    @patch('src.main.sync_json_to_md')
+    @patch('src.main.interactive_find_project_dir')
+    def test_run_sync_mode_json_to_md(self, mock_interactive, mock_sync):
+        """Test run_sync_mode for JSON -> MD."""
+        from src.main import run_sync_mode
+        args = MagicMock(sync_md_to_json=False, sync_json_to_md=True)
+        
+        mock_interactive.return_value = pathlib.Path("repo/Project")
+        
+        run_sync_mode(args)
+        
+        mock_sync.assert_called_with(pathlib.Path("repo/Project"))

@@ -30,4 +30,6 @@ def get_logger(name: str):
 
 
 def sanitize(s: str) -> str:
-    return "".join(c for c in s if c.isalnum() or c in (' ', '-', '_')).strip()
+    # Allow alphanumeric, space, dash, underscore, dots, commas, parens
+    allowed = set(" -_.,()")
+    return "".join(c for c in s if c.isalnum() or c in allowed).strip()

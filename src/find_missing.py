@@ -39,6 +39,8 @@ def load_existing_timestamps(json_path: pathlib.Path) -> dict:
         return {}
 import sys
 
+from .repo_manager import interactive_find_project_dir, parse_project_dir
+
 def interactive_find_setup(epub_parser, audio_path: str):
     """
     Interactive workflow to setup the find missing chapters process.
@@ -51,67 +53,20 @@ def interactive_find_setup(epub_parser, audio_path: str):
     print("FIND MISSING CHAPTERS MODE")
     print("=" * 60)
     print("This mode uses existing results in the 'repo/' folder as anchors.")
-    print("Please enter the Audible ID of the book (e.g. B00XXXXXXX).")
     
-    audible_id = input("Audible ID: ").strip()
-    
-    if not audible_id:
-        logger.error("Audible ID is required.")
+    project_dir = interactive_find_project_dir()
+    if not project_dir:
         sys.exit(1)
-        
-    # Scan repo for this ID
-    base_repo = pathlib.Path("repo")
-    found_dir = None
-    found_author = ""
     
-    # We need to find `repo/{Author}/{Title} [{ID}]`
-    # We can use glob on base_repo
-    # Pattern: */*[{audible_id}]
-    
-    candidates = list(base_repo.glob(f"*/*[{audible_id}]"))
-    
-    if not candidates:
-        logger.error(f"No project found in 'repo/' matching ID: {audible_id}")
-        logger.info("Please ensure you have run the initial scan first.")
-        sys.exit(1)
+    author, title, audible_id = parse_project_dir(project_dir)
         
-    if len(candidates) > 1:
-        logger.warning(f"Multiple projects found for ID {audible_id}. Using the first one.")
-        
-    found_dir = candidates[0]
-    # Structure: repo/{Author}/{Title} [{ID}]
-    # Parent name is Author
-    found_author = found_dir.parent.name
-    # Dir name is Title [ID]
-    dir_name = found_dir.name
-    
-    # Extract Title: everything before " [{ID}]"
-    # Safety check
-    suffix = f" [{audible_id}]"
-    if dir_name.endswith(suffix):
-        found_title = dir_name[:-len(suffix)]
-    else:
-        # Fallback if bracket format is weird, just take dir_name
-        found_title = dir_name
-        
-    print(f"\nFound existing project:")
-    print(f"  Author: {found_author}")
-    print(f"  Title:  {found_title}")
-    print(f"  ID:     {audible_id}")
-    print("-" * 60)
-    
-    confirm = input("Is this correct? [y/N]: ").strip().lower()
-    if confirm != 'y':
-        logger.info("Aborted by user.")
-        sys.exit(0)
-        
-    files_exist = (found_dir / "chapter_timestamps.json").exists()
+    files_exist = (project_dir / "chapter_timestamps.json").exists()
     if not files_exist:
         logger.error("Project folder exists but 'chapter_timestamps.json' is missing.")
         sys.exit(1)
         
     # Proceed
-    find_missing_chapters(epub_parser, audio_path, found_author, found_title, audible_id)
+    find_missing_chapters(epub_parser, audio_path, author, title, audible_id)
 
 
 def find_missing_chapters(epub_parser, audio_path: str, author: str, title: str, audible_id: str):
