@@ -9,7 +9,6 @@ from .utils import get_logger
 logger = get_logger("OutputManager")
 
 
-
 def get_output_dir(final_author, final_title, final_audible_id):
     """
     Returns the Path object for the book's output directory.

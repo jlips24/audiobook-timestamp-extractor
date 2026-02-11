@@ -1,8 +1,5 @@
-import json
-import pathlib
-import sys
 import unittest
-from unittest.mock import MagicMock, call, mock_open, patch
+from unittest.mock import MagicMock, mock_open, patch
 
 from src.find_missing import find_missing_chapters, interactive_find_setup
 from src.models import Chapter
@@ -24,11 +21,20 @@ class TestFindMissing(unittest.TestCase):
     @patch("src.find_missing.sync_json_to_md")
     @patch("src.find_missing.get_output_dir")
     @patch("src.find_missing.AudioAnalyzer")
-    @patch("src.find_missing.json.dump") # Mock json dump directly
-    @patch("src.find_missing.open", new_callable=mock_open) # Mock file open
+    @patch("src.find_missing.json.dump")  # Mock json dump directly
+    @patch("src.find_missing.open", new_callable=mock_open)  # Mock file open
     @patch("src.find_missing.load_existing_timestamps")
     @patch("pathlib.Path.exists")
-    def test_find_missing_basic_gap(self, mock_exists, mock_load_json, mock_file, mock_json_dump, mock_analyzer_cls, mock_get_output_dir, mock_sync):
+    def test_find_missing_basic_gap(
+        self,
+        mock_exists,
+        mock_load_json,
+        mock_file,
+        mock_json_dump,
+        mock_analyzer_cls,
+        mock_get_output_dir,
+        mock_sync
+    ):
         # Setup Mocks
         mock_exists.return_value = True
 
@@ -43,7 +49,7 @@ class TestFindMissing(unittest.TestCase):
         # Chap 3 is found at 500s
         mock_load_json.return_value = [
             {"title": "Chapter 1", "seconds": 100},
-            {"title": "Chapter 2", "seconds": ""}, # Missing
+            {"title": "Chapter 2", "seconds": ""},  # Missing
             {"title": "Chapter 3", "seconds": 500}
         ]
 
@@ -106,12 +112,21 @@ class TestFindMissing(unittest.TestCase):
     @patch("src.find_missing.open", new_callable=mock_open)
     @patch("src.find_missing.load_existing_timestamps")
     @patch("pathlib.Path.exists")
-    def test_find_missing_chained_discovery(self, mock_exists, mock_load_json, mock_file, mock_json_dump, mock_analyzer_cls, mock_get_output_dir):
+    def test_find_missing_chained_discovery(
+        self,
+        mock_exists,
+        mock_load_json,
+        mock_file,
+        mock_json_dump,
+        mock_analyzer_cls,
+        mock_get_output_dir
+    ):
         # Scenario: Chap 1 (100s) ... Chap 2 (Missing) ... Chap 3 (Missing) ... Chap 4 (500s)
         # Note: In the new logic, we iterate the list ONCE.
         # If Chap 2 is found, updates are made IN PLACE in the list.
         # When loop reaches Chap 3, it looks back at "previous found".
-        # Does the loop see the *updated* Chap 2? Yes, because we update `existing_data` list objects in place.
+        # Does the loop see the *updated* Chap 2? Yes, because we update `existing_data` list
+        # objects in place.
 
         mock_exists.return_value = True
         mock_dir = MagicMock()
@@ -152,7 +167,9 @@ class TestFindMissing(unittest.TestCase):
             if chap.toc_title == "Chapter 3":
                 found_chap_3_call = True
                 # Should start around 200 + buffer
-                self.assertTrue(200 <= start <= 210, f"Chapter 3 start {start} should follow Chap 2 (200)")
+                self.assertTrue(
+                    200 <= start <= 210, f"Chapter 3 start {start} should follow Chap 2 (200)"
+                )
 
         self.assertTrue(found_chap_3_call)
 
@@ -161,7 +178,14 @@ class TestFindMissing(unittest.TestCase):
     @patch("pathlib.Path.exists")
     @patch("src.find_missing.find_missing_chapters")
     @patch("sys.exit")
-    def test_interactive_find_setup_success(self, mock_exit, mock_find, mock_exists, mock_parse, mock_interactive):
+    def test_interactive_find_setup_success(
+        self,
+        mock_exit,
+        mock_find,
+        mock_exists,
+        mock_parse,
+        mock_interactive
+    ):
         # Setup
         mock_project_dir = MagicMock()
         mock_interactive.return_value = mock_project_dir

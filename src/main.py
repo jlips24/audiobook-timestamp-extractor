@@ -14,12 +14,37 @@ logger = get_logger("Main")
 
 def main():
     parser = argparse.ArgumentParser(description="Audiobook Chapter Syncer")
-    parser.add_argument("epub", nargs='?', help="Path to the source EPUB file (Optional for sync modes)")
-    parser.add_argument("audio", nargs='?', help="Path to the source M4B/MP3 audiobook file (Optional for sync modes)")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
-    parser.add_argument("--find-missing", action="store_true", help="Scan only for missing chapters based on existing output")
-    parser.add_argument("--sync-md-to-json", action="store_true", help="Update JSON from manual edits in Markdown")
-    parser.add_argument("--sync-json-to-md", action="store_true", help="Update Markdown table from JSON data")
+    parser.add_argument(
+        "epub",
+        nargs='?',
+        help="Path to the source EPUB file (Optional for sync modes)"
+    )
+    parser.add_argument(
+        "audio",
+        nargs='?',
+        help="Path to the source M4B/MP3 audiobook file (Optional for sync modes)"
+    )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable verbose logging"
+    )
+    parser.add_argument(
+        "--find-missing",
+        action="store_true",
+        help="Scan only for missing chapters based on existing output"
+    )
+    parser.add_argument(
+        "--sync-md-to-json",
+        action="store_true",
+        help="Update JSON from manual edits in Markdown"
+    )
+    parser.add_argument(
+        "--sync-json-to-md",
+        action="store_true",
+        help="Update Markdown table from JSON data"
+    )
 
     args = parser.parse_args()
 
@@ -35,8 +60,8 @@ def main():
         # Route to find missing mode
         # Fix: find_missing mode DOES require files because it runs analysis
         if not args.epub or not args.audio:
-             logger.error("Find Missing mode requires EPUB and Audio file paths.")
-             sys.exit(1)
+            logger.error("Find Missing mode requires EPUB and Audio file paths.")
+            sys.exit(1)
         run_find_missing_mode(args)
         sys.exit(0)
 

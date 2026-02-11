@@ -1,10 +1,12 @@
 import json
 import pathlib
-from typing import List, Optional
+import sys
+from typing import List
 
 from .audio_analyzer import AudioAnalyzer
 from .models import Chapter
 from .output_manager import get_output_dir
+from .repo_manager import interactive_find_project_dir, parse_project_dir
 from .sync_logic import sync_json_to_md
 from .utils import get_logger, seconds_to_hms
 
@@ -32,10 +34,6 @@ def load_existing_timestamps(json_path: pathlib.Path) -> List[dict]:
     except Exception as e:
         logger.error(f"Failed to load existing stamps: {e}")
         return []
-
-import sys
-
-from .repo_manager import interactive_find_project_dir, parse_project_dir
 
 
 def interactive_find_setup(epub_parser, audio_path: str):
@@ -127,7 +125,9 @@ def find_missing_chapters(epub_parser, audio_path: str, author: str, title: str,
 
         # 4a. Get Search Phrase from EPUB
         if item_title not in epub_map:
-            logger.warning(f"  [Skip] Title '{item_title}' not found in EPUB. Cannot determine search phrase.")
+            logger.warning(
+                f"  [Skip] Title '{item_title}' not found in EPUB. Cannot determine search phrase."
+            )
             continue
 
         # Get search phrase from Chapter object
@@ -147,7 +147,7 @@ def find_missing_chapters(epub_parser, audio_path: str, author: str, title: str,
 
         # End Bound: Closest following FOUND chapter
         end_bound = total_duration
-        for nxt in existing_data[i+1:]:
+        for nxt in existing_data[i + 1:]:
             s = nxt.get("seconds")
             if s is not None and s != "":
                 try:
@@ -163,8 +163,8 @@ def find_missing_chapters(epub_parser, audio_path: str, author: str, title: str,
             continue
 
         logger.info(
-            f"  Search Range: {seconds_to_hms(int(start_bound))} -> {seconds_to_hms(int(end_bound))} "
-            f"(Window: {int(search_window)}s)"
+            f"  Search Range: {seconds_to_hms(int(start_bound))} -> "
+            f"{seconds_to_hms(int(end_bound))} (Window: {int(search_window)}s)"
         )
 
         # Add buffer
@@ -172,24 +172,24 @@ def find_missing_chapters(epub_parser, audio_path: str, author: str, title: str,
         actual_window = end_bound - actual_start
 
         if actual_window < 10:
-             logger.warning("  [Skip] Gap too small (<10s).")
-             continue
+            logger.warning("  [Skip] Gap too small (<10s).")
+            continue
 
         # 4c. Run Search
         found = analyzer.find_chapter_linear(
-            epub_chap, # Pass the EPUB chapter object which has the search phrase
+            epub_chap,  # Pass the EPUB chapter object which has the search phrase
             start_search_time=actual_start,
             max_search_duration=actual_window
         )
 
         if found and epub_chap.confirmed_time is not None:
-             logger.info(f"  ✅ Found at {epub_chap.confirmed_time}s")
-             # Update the JSON item
-             item["seconds"] = int(epub_chap.confirmed_time)
-             item["start_time"] = seconds_to_hms(int(epub_chap.confirmed_time))
-             updates_made = True
+            logger.info(f"  ✅ Found at {epub_chap.confirmed_time}s")
+            # Update the JSON item
+            item["seconds"] = int(epub_chap.confirmed_time)
+            item["start_time"] = seconds_to_hms(int(epub_chap.confirmed_time))
+            updates_made = True
         else:
-             logger.info("  ❌ Not found.")
+            logger.info("  ❌ Not found.")
 
     # 5. Save Updated Results
     if updates_made:
