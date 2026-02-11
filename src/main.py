@@ -20,17 +20,17 @@ def main():
     parser.add_argument("--find-missing", action="store_true", help="Scan only for missing chapters based on existing output")
     parser.add_argument("--sync-md-to-json", action="store_true", help="Update JSON from manual edits in Markdown")
     parser.add_argument("--sync-json-to-md", action="store_true", help="Update Markdown table from JSON data")
-    
+
     args = parser.parse_args()
 
     log_level = "DEBUG" if args.verbose else "INFO"
     setup_logging(log_level)
-    
+
     # Check for Sync Modes first (they don't need files)
     if args.sync_md_to_json or args.sync_json_to_md:
         run_sync_mode(args)
         sys.exit(0)
-    
+
     if args.find_missing:
         # Route to find missing mode
         # Fix: find_missing mode DOES require files because it runs analysis
@@ -132,7 +132,7 @@ def run_find_missing_mode(args):
     from src.find_missing import interactive_find_setup
 
     logger.info("Running in FIND MISSING mode.")
-    
+
     if not os.path.exists(args.epub):
         logger.error(f"EPUB file not found: {args.epub}")
         sys.exit(1)
@@ -149,7 +149,7 @@ def run_sync_mode(args):
     Entry point for synchronization utilities.
     """
     from src.repo_manager import interactive_find_project_dir
-    from src.sync_logic import sync_md_to_json, sync_json_to_md
+    from src.sync_logic import sync_json_to_md, sync_md_to_json
 
     project_dir = interactive_find_project_dir()
     if not project_dir:

@@ -4,7 +4,8 @@ from typing import List, Optional
 
 from .audio_analyzer import AudioAnalyzer
 from .models import Chapter
-from .output_manager import get_output_dir, save_results
+from .output_manager import get_output_dir
+from .sync_logic import sync_json_to_md
 from .utils import get_logger, seconds_to_hms
 
 logger = get_logger("FixLogic")
@@ -22,18 +23,20 @@ def load_existing_timestamps(json_path: pathlib.Path) -> List[dict]:
     try:
         with open(json_path, "r") as f:
             data = json.load(f)
-        
+
         # Ensure we return valid list
         if not isinstance(data, list):
             return []
-            
+
         return data
     except Exception as e:
         logger.error(f"Failed to load existing stamps: {e}")
         return []
 
 import sys
+
 from .repo_manager import interactive_find_project_dir, parse_project_dir
+
 
 def interactive_find_setup(epub_parser, audio_path: str):
     """
@@ -47,18 +50,18 @@ def interactive_find_setup(epub_parser, audio_path: str):
     print("FIND MISSING CHAPTERS MODE")
     print("=" * 60)
     print("This mode uses existing results in the 'repo/' folder as anchors.")
-    
+
     project_dir = interactive_find_project_dir()
     if not project_dir:
         sys.exit(1)
-    
+
     author, title, audible_id = parse_project_dir(project_dir)
-        
+
     files_exist = (project_dir / "chapter_timestamps.json").exists()
     if not files_exist:
         logger.error("Project folder exists but 'chapter_timestamps.json' is missing.")
         sys.exit(1)
-        
+
     # Proceed
     find_missing_chapters(epub_parser, audio_path, author, title, audible_id)
 
@@ -81,14 +84,14 @@ def find_missing_chapters(epub_parser, audio_path: str, author: str, title: str,
     # 2. Load existing JSON results
     output_dir = get_output_dir(author, title, audible_id)
     json_path = output_dir / "chapter_timestamps.json"
-    
+
     if not json_path.exists():
         logger.error(f"No existing results found at {json_path}. Cannot fix missing.")
         return
 
     logger.info(f"Loading existing results from {json_path}")
     existing_data = load_existing_timestamps(json_path)
-    
+
     if not existing_data:
         logger.warning("Existing JSON is empty or invalid.")
         return
@@ -100,42 +103,42 @@ def find_missing_chapters(epub_parser, audio_path: str, author: str, title: str,
 
     # 4. Iterate and Find Missing
     # We maintain 'last_confirmed_time' to serve as the start anchor for gaps.
-    
+
     updates_made = False
-    
+
     # Pre-process: Calculate start/end bounds for each item?
     # Simpler: Just iterate. If missing, look ahead for next found to determine window.
-    
+
     for i, item in enumerate(existing_data):
         item_title = item.get("title")
         item_seconds = item.get("seconds")
-        
+
         # Check if "FOUND" (has valid seconds)
         is_found = False
         if item_seconds is not None and item_seconds != "":
             try:
                 # Ensure it's a number
-                float(item_seconds) 
+                float(item_seconds)
                 is_found = True
             except ValueError:
                 is_found = False
-        
+
         if is_found:
             continue
-            
+
         # --- It's MISSING. Perform Search. ---
         logger.info(f"\nAttempting to find missing Chapter: '{item_title}'")
-        
+
         # 4a. Get Search Phrase from EPUB
         if item_title not in epub_map:
             logger.warning(f"  [Skip] Title '{item_title}' not found in EPUB. Cannot determine search phrase.")
             continue
-            
+
         epub_chap = epub_map[item_title]
-        # We need a Chapter object for the analyzer. 
-        # We can reuse the one from EPUB but we should verify index/title match? 
+        # We need a Chapter object for the analyzer.
+        # We can reuse the one from EPUB but we should verify index/title match?
         # Actually, analyzer only needs search_phrase and index (for logging).
-        
+
         # 4b. Determine Search Window
         # Start Bound: Closest preceding FOUND chapter
         start_bound = 0.0
@@ -147,7 +150,7 @@ def find_missing_chapters(epub_parser, audio_path: str, author: str, title: str,
                     break
                 except ValueError:
                     pass
-        
+
         # End Bound: Closest following FOUND chapter
         end_bound = total_duration
         for nxt in existing_data[i+1:]:
@@ -160,7 +163,7 @@ def find_missing_chapters(epub_parser, audio_path: str, author: str, title: str,
                     pass
 
         search_window = end_bound - start_bound
-        
+
         if search_window <= 0:
             logger.warning(f"  [Skip] Invalid window: Start {start_bound} >= End {end_bound}")
             continue
@@ -184,18 +187,11 @@ def find_missing_chapters(epub_parser, audio_path: str, author: str, title: str,
             start_search_time=actual_start,
             max_search_duration=actual_window
         )
-        
+
         if found and epub_chap.confirmed_time is not None:
              logger.info(f"  ✅ Found at {epub_chap.confirmed_time}s")
              # Update the JSON item
              item["seconds"] = int(epub_chap.confirmed_time)
-             # Also update start_time string if needed (HH:MM:SS) - usually analyzer sets this but this is a dict
-             # We need to format it ourselves or import helper.
-             # But wait, find_chapter_linear updates the 'epub_chap' object.
-             # We should use 'seconds_to_hms' from utils if we want to be clean, 
-             # OR just leave it for user to see 'seconds' and sync logic fixes it?
-             # No, better to verify integrity.
-             from .utils import seconds_to_hms
              item["start_time"] = seconds_to_hms(int(epub_chap.confirmed_time))
              updates_made = True
         else:
@@ -204,20 +200,15 @@ def find_missing_chapters(epub_parser, audio_path: str, author: str, title: str,
     # 5. Save Updated Results
     if updates_made:
         logger.info("Saving updated results...")
-        # We save 'existing_data' which is the list of dicts.
-        # save_results expects List[Chapter], not List[dict].
-        # We effectively bypassed 'save_results' logic which reconstructs JSON from Chapter objects.
-        # We should write the JSON directly here to verify we preserve structure.
-        
+
         try:
-           with open(json_path, "w") as f:
-               json.dump(existing_data, f, indent=4)
-           logger.info("✅ JSON updated.")
-           
-           # Should we also update MD?
-           # The user might expect MD to be updated too.
-           # But let's stick to JSON as the primary per instructions. 
-           # User can run --sync-json-to-md after.
+            with open(json_path, "w") as f:
+                json.dump(existing_data, f, indent=4)
+            logger.info("✅ JSON updated.")
+
+            # Sync to Markdown
+            sync_json_to_md(output_dir)
+
         except Exception as e:
             logger.error(f"Failed to save JSON: {e}")
     else:
