@@ -9,6 +9,18 @@ from .utils import get_logger
 logger = get_logger("OutputManager")
 
 
+
+def get_output_dir(final_author, final_title, final_audible_id):
+    """
+    Returns the Path object for the book's output directory.
+    Format: repo/{Author}/{Title} [{AudibleID}]
+    """
+    base_repo = pathlib.Path("repo")
+    author_dir = base_repo / final_author
+    book_dir_name = f"{final_title} [{final_audible_id}]"
+    return author_dir / book_dir_name
+
+
 def save_results(valid_chapters, final_author, final_title, final_audible_id):
     """
     Formats the results and saves them to JSON and Markdown files.
@@ -56,12 +68,8 @@ def save_results(valid_chapters, final_author, final_title, final_audible_id):
 
     # -- Output Directory Logic --
 
-    # Create "repo/{Author}/{Title} [{AudibleID}]"
-    base_repo = pathlib.Path("repo")
-    author_dir = base_repo / final_author
-    book_dir_name = f"{final_title} [{final_audible_id}]"
-    output_dir = author_dir / book_dir_name
-
+    # -- Output Directory Logic --
+    output_dir = get_output_dir(final_author, final_title, final_audible_id)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 1. JSON

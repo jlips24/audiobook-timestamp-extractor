@@ -17,13 +17,19 @@ def main():
     parser.add_argument("epub", help="Path to the source EPUB file")
     parser.add_argument("audio", help="Path to the source M4B/MP3 audiobook file")
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
-
+    parser.add_argument("--find-missing", action="store_true", help="Scan only for missing chapters based on existing output")
     args = parser.parse_args()
 
     log_level = "DEBUG" if args.verbose else "INFO"
     setup_logging(log_level)
+    
+    if args.find_missing:
+        # Route to find missing mode
+        run_find_missing_mode(args)
+        sys.exit(0)
 
     if not os.path.exists(args.epub):
+
         logger.error(f"EPUB file not found: {args.epub}")
         sys.exit(1)
 
@@ -101,6 +107,31 @@ def main():
 
     # --- Phase 5: Output ---
     save_results(valid_chapters, final_author, final_title, final_audible_id)
+
+
+def run_find_missing_mode(args):
+    """
+    Separate entry point for finding missing chapters.
+    """
+    from src.find_missing import interactive_find_setup
+
+    logger.info("Running in FIND MISSING mode.")
+    
+    if not os.path.exists(args.epub):
+        logger.error(f"EPUB file not found: {args.epub}")
+        sys.exit(1)
+    if not os.path.exists(args.audio):
+        logger.error(f"Audio file not found: {args.audio}")
+        sys.exit(1)
+
+    epub_parser = EpubParser(args.epub)
+    
+    # Use the interactive setup which prompts for ID and finds metadata
+    interactive_find_setup(epub_parser, args.audio)
+
+if __name__ == "__main__":
+    main()
+
 
 
 if __name__ == "__main__":

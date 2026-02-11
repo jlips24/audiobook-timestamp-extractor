@@ -47,6 +47,14 @@ python3 -m src.main "path/to/book.epub" "path/to/audio.m4b"
 3. **Estimation & Analysis**: The tool will iterate through chapters, predicting their location and using Whisper to find the exact start time.
 4. **Result**: A `chapter_timestamps.json` file is generated with the results.
 
+### Find Missing Chapters
+
+If the initial scan misses some chapters, you can re-run the tool in "Find Missing" mode without rescanning the entire book. This uses your existing results as anchors and only searches the gaps between found chapters.
+
+```bash
+python3 -m src.main "path/to/book.epub" "path/to/audio.m4b" --find-missing
+```
+
 ## Testing
 
 To run the unit test suite:
