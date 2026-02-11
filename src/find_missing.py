@@ -69,6 +69,7 @@ def find_missing_chapters(epub_parser, audio_path: str, author: str, title: str,
     Core logic to find missing chapters using existing JSON data as the master list.
     """
     logger.info("Starting 'Find Missing' Mode...")
+    updates_made = False
 
     # 1. Parse EPUB to get Search Phrases (Lookup Map)
     epub_chapters: List[Chapter] = epub_parser.parse()
@@ -101,7 +102,7 @@ def find_missing_chapters(epub_parser, audio_path: str, author: str, title: str,
 
     # 4. Iterate and Find Missing
     # Iterate through existing data. If missing, look ahead for next found to determine window.
-    updates_made = False
+
 
     for i, item in enumerate(existing_data):
         item_title = item.get("title")
