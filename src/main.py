@@ -141,7 +141,9 @@ def run_find_missing_mode(args):
         sys.exit(1)
 
     epub_parser = EpubParser(args.epub)
-    
+    interactive_find_setup(epub_parser, args.audio)
+
+
 def run_sync_mode(args):
     """
     Entry point for synchronization utilities.
@@ -157,11 +159,6 @@ def run_sync_mode(args):
         sync_md_to_json(project_dir)
     elif args.sync_json_to_md:
         sync_json_to_md(project_dir)
-
-
-if __name__ == "__main__":
-    main()
-
 
 
 if __name__ == "__main__":
