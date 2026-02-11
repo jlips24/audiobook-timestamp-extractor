@@ -66,7 +66,6 @@ def sync_md_to_json(project_dir: pathlib.Path):
             start_time_str = parts[1]
 
             # Recalculate seconds from the Time String to trust the human edit
-            # (Ignore the 3rd column 'Seconds', re-derive it)
             if start_time_str:
                 seconds = parse_timestamp_to_seconds(start_time_str)
                 chapters.append({
@@ -118,8 +117,7 @@ def sync_json_to_md(project_dir: pathlib.Path):
                 header_lines.append(line)
     else:
         # Default header if missing
-        # We try to guess metadata from folder name
-        # Ideally we extracted this in repo_manager but we can just use defaults
+        # Default header if missing
         header_lines.append("# Chapter Timestamps\n\n")
 
     # Write New MD
@@ -130,8 +128,7 @@ def sync_json_to_md(project_dir: pathlib.Path):
             pass
 
         # Write Table Header Logic
-        # We need to make sure we don't duplicate headers if they were in header_lines
-        # The logic above stopped *before* the table header, so we write a fresh one.
+        # Write Table Header matching expected format
 
         f.write("| Chapter | Start Time | Seconds |\n")
         f.write("| :--- | :--- | :--- |\n")
@@ -141,8 +138,7 @@ def sync_json_to_md(project_dir: pathlib.Path):
             start_time = item.get("start_time", "")
             seconds = item.get("seconds", "")
 
-            # Recalculate formatted string if missing but seconds present?
-            # Or trust JSON. Let's trust JSON but fallback.
+            # Recalculate formatted string from seconds if missing
             if not start_time and seconds and isinstance(seconds, (int, float)):
                 start_time = seconds_to_hms(int(seconds))
 

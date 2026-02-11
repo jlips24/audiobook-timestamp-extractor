@@ -102,12 +102,8 @@ def find_missing_chapters(epub_parser, audio_path: str, author: str, title: str,
     logger.info(f"Audio Duration: {total_duration}s")
 
     # 4. Iterate and Find Missing
-    # We maintain 'last_confirmed_time' to serve as the start anchor for gaps.
-
+    # Iterate through existing data. If missing, look ahead for next found to determine window.
     updates_made = False
-
-    # Pre-process: Calculate start/end bounds for each item?
-    # Simpler: Just iterate. If missing, look ahead for next found to determine window.
 
     for i, item in enumerate(existing_data):
         item_title = item.get("title")
@@ -134,10 +130,8 @@ def find_missing_chapters(epub_parser, audio_path: str, author: str, title: str,
             logger.warning(f"  [Skip] Title '{item_title}' not found in EPUB. Cannot determine search phrase.")
             continue
 
+        # Get search phrase from Chapter object
         epub_chap = epub_map[item_title]
-        # We need a Chapter object for the analyzer.
-        # We can reuse the one from EPUB but we should verify index/title match?
-        # Actually, analyzer only needs search_phrase and index (for logging).
 
         # 4b. Determine Search Window
         # Start Bound: Closest preceding FOUND chapter
@@ -173,7 +167,7 @@ def find_missing_chapters(epub_parser, audio_path: str, author: str, title: str,
             f"(Window: {int(search_window)}s)"
         )
 
-        # Optimization: Buffer (same as before)
+        # Add buffer
         actual_start = start_bound + 5.0
         actual_window = end_bound - actual_start
 

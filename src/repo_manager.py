@@ -17,17 +17,11 @@ def find_project_by_id(audible_id: str) -> Optional[pathlib.Path]:
         return None
 
     # Pattern: */*[{audible_id}]
-    # Glob treats [] as character selection, so we can't use it directly for literal brackets easily.
-    # Instead, we'll iterate over all author folders and check project folders.
+    # Iterate manually to handle brackets in directory names (unfriendly to glob)
 
     candidates = []
     for author_dir in base_repo.iterdir():
-        # print(f"DEBUG: Checking author_dir: {author_dir}, name={author_dir.name}, is_dir={author_dir.is_dir()}")
-        if not author_dir.is_dir() or author_dir.name.startswith('.'):
-            continue
-
         for project_dir in author_dir.iterdir():
-            # print(f"DEBUG: Checking project_dir: {project_dir}, name={project_dir.name}, is_dir={project_dir.is_dir()}")
             if not project_dir.is_dir() or project_dir.name.startswith('.'):
                 continue
 
@@ -53,8 +47,7 @@ def parse_project_dir(project_dir: pathlib.Path) -> Tuple[str, str, str]:
 
     # ID is in brackets at end
     if "[" in dir_name and dir_name.endswith("]"):
-        # rsplit to handle titles with brackets?
-        # safest is to find last '['
+        # Find last bracket to separate ID
         last_bracket = dir_name.rfind("[")
         title = dir_name[:last_bracket].strip()
         audible_id = dir_name[last_bracket + 1:-1].strip()
