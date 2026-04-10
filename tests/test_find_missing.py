@@ -58,7 +58,7 @@ class TestFindMissing(unittest.TestCase):
         mock_analyzer.get_duration.return_value = 1000.0
 
         # When finding Chapter 2 (missing), return success at 300s
-        def find_side_effect(chapter, start_search_time, max_search_duration):
+        def find_side_effect(chapter, start_search_time, max_search_duration, **kwargs):
             if chapter.toc_title == "Chapter 2":
                 chapter.status = "FOUND"
                 chapter.confirmed_time = 300.0
@@ -143,7 +143,7 @@ class TestFindMissing(unittest.TestCase):
         mock_analyzer = mock_analyzer_cls.return_value
         mock_analyzer.get_duration.return_value = 1000.0
 
-        def find_side_effect(chapter, start_search_time, max_search_duration):
+        def find_side_effect(chapter, start_search_time, max_search_duration, **kwargs):
             if chapter.toc_title == "Chapter 2":
                 chapter.confirmed_time = 200.0
                 return True

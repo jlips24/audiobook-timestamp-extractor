@@ -176,11 +176,12 @@ def find_missing_chapters(epub_parser, audio_path: str, author: str, title: str,
             logger.warning("  [Skip] Gap too small (<10s).")
             continue
 
-        # 4c. Run Search
+        # 4c. Run Search (Use lower confidence for missing chapters)
         found = analyzer.find_chapter_linear(
-            epub_chap,  # Pass the EPUB chapter object which has the search phrase
+            epub_chap,
             start_search_time=actual_start,
-            max_search_duration=actual_window
+            max_search_duration=actual_window,
+            min_confidence=80
         )
 
         if found and epub_chap.confirmed_time is not None:
