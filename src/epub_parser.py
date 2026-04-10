@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 from ebooklib import epub
 
 from .models import Chapter
-from .utils import get_logger
+from .utils import get_logger, normalize_quotes
 
 logger = get_logger(__name__)
 
@@ -48,7 +48,7 @@ class EpubParser:
                 continue
 
             href = item.href.split('#')[0]  # Remove anchors
-            title = item.title
+            title = normalize_quotes(item.title)
 
             # Find the actual item in the book
             doc = self.book.get_item_with_href(href)
@@ -129,15 +129,15 @@ class EpubParser:
             return "", ""
 
         paragraph_length_limit = 150
-        primary = self._safe_truncate(valid_paragraphs[0], paragraph_length_limit)
+        primary = normalize_quotes(self._safe_truncate(valid_paragraphs[0], paragraph_length_limit))
         secondary = ""
 
         if len(primary) < 50 and len(valid_paragraphs) > 1:
             # Combine if first is short
             combined = valid_paragraphs[0] + " " + valid_paragraphs[1]
-            primary = self._safe_truncate(combined, paragraph_length_limit)
+            primary = normalize_quotes(self._safe_truncate(combined, paragraph_length_limit))
         elif len(valid_paragraphs) > 1:
-            secondary = self._safe_truncate(valid_paragraphs[1], paragraph_length_limit)
+            secondary = normalize_quotes(self._safe_truncate(valid_paragraphs[1], paragraph_length_limit))
 
         return primary, secondary
 

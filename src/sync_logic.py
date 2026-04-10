@@ -1,7 +1,7 @@
 import json
 import pathlib
 
-from .utils import get_logger, seconds_to_hms
+from .utils import get_logger, seconds_to_hms, normalize_quotes
 
 logger = get_logger("SyncLogic")
 
@@ -62,8 +62,9 @@ def sync_md_to_json(project_dir: pathlib.Path):
             if len(parts) < 2:
                 continue
 
-            title = parts[0]
+            title = normalize_quotes(parts[0])
             start_time_str = parts[1]
+
 
             # Recalculate seconds from the Time String to trust the human edit
             if start_time_str:

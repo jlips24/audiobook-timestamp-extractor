@@ -35,6 +35,28 @@ class TestSyncLogic(unittest.TestCase):
         self.assertEqual(data[1]['title'], "Chapter 2")
         self.assertEqual(data[1]['seconds'], 150)  # 2*60 + 30 = 150
 
+    @patch("json.dump")
+    @patch("builtins.open", new_callable=mock_open)
+    @patch("pathlib.Path.exists")
+    def test_sync_md_to_json_normalization(self, mock_exists, mock_file, mock_json_dump):
+        # Verify that curly apostrophes in MD are normalized when syncing to JSON
+        mock_exists.return_value = True
+
+        md_content = [
+            "| Chapter | Start Time | Seconds |",
+            "| :--- | :--- | :--- |",
+            "| It’s a Title | 00:01:00 | 60 |"
+        ]
+        mock_file.return_value.readlines.return_value = md_content
+
+        sync_md_to_json(pathlib.Path("dummy"))
+
+        # Check normalized data
+        args, _ = mock_json_dump.call_args
+        data = args[0]
+
+        self.assertEqual(data[0]['title'], "It's a Title")
+
     @patch("json.load")
     @patch("builtins.open", new_callable=mock_open)
     @patch("pathlib.Path.exists")

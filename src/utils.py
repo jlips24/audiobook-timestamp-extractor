@@ -30,6 +30,14 @@ def get_logger(name: str):
 
 
 def sanitize(s: str) -> str:
-    # Allow alphanumeric, space, dash, underscore, dots, commas, parens
-    allowed = set(" -_.,()")
+    # Allow alphanumeric, space, dash, underscore, dots, commas, parens, and quotes
+    allowed = set(" -_.,()\'")
     return "".join(c for c in s if c.isalnum() or c in allowed).strip()
+
+
+def normalize_quotes(s: str) -> str:
+    """Replaces curly apostrophes with straight ones."""
+    if not s:
+        return s
+    return (s.replace("’", "'")
+            .replace("‘", "'"))
