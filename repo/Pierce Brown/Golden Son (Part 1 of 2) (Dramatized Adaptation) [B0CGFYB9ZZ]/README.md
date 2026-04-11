@@ -1,7 +1,10 @@
 # Chapter Timestamps
 **Book:** GGolden Son (Part 1 of 2) (Dramatized Adaptation)
+
 **Author:** Pierce Brown
+
 **Audible ID:** B0CGFYB9ZZ
+
 
 | Chapter | Start Time | Seconds |
 | :--- | :--- | :--- |

@@ -118,8 +118,11 @@ def sync_json_to_md(project_dir: pathlib.Path):
                 header_lines.append(line)
     else:
         # Default header if missing
-        # Default header if missing
         header_lines.append("# Chapter Timestamps\n\n")
+        # Note: In a real scenario, we'd want to pull metadata from the JSON or dir name 
+        # but for now we'll just ensure the default header is well-spaced.
+        # Actually, let's keep it simple as it was, but improve the spacing if we had more info.
+        pass
 
     # Write New MD
     with open(md_path, "w") as f:

@@ -1,7 +1,10 @@
 # Chapter Timestamps
 **Book:** Red Rising (Part 2 of 2) (Drmatized Adaptation)
+
 **Author:** Pierce Brown
+
 **Audible ID:** B0C4LSXHPG
+
 
 | Chapter | Start Time | Seconds |
 | :--- | :--- | :--- |

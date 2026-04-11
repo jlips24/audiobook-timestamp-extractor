@@ -1,7 +1,10 @@
 # Chapter Timestamps
 **Book:** Dark Age (Part 1 of 3) (Dramatized Adaptation)
+
 **Author:** Pierce Brown
+
 **Audible ID:** B0FF61W874
+
 
 | Chapter | Start Time | Seconds |
 | :--- | :--- | :--- |

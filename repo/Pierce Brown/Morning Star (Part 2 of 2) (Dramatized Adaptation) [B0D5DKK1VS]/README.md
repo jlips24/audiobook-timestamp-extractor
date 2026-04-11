@@ -1,7 +1,10 @@
 # Chapter Timestamps
 **Book:** Morning Star (Part 2 of 2) (Dramatized Adaptation)
+
 **Author:** Pierce Brown
+
 **Audible ID:** B0D5DKK1VS
+
 
 | Chapter | Start Time | Seconds |
 | :--- | :--- | :--- |
