@@ -3,7 +3,7 @@
 
 **Author:** Pierce Brown
 
-**Audible ID:** B0BVGTFDWN
+**Audible ID:** [B0BVGTFDWN](https://www.audible.com/pd/B0BVGTFDWN)
 
 
 | Chapter | Start Time | Seconds |

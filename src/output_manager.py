@@ -82,7 +82,7 @@ def save_results(valid_chapters, final_author, final_title, final_audible_id):
         f.write("# Chapter Timestamps\n\n")
         f.write(f"**Book:** {final_title}\n\n")
         f.write(f"**Author:** {final_author}\n\n")
-        f.write(f"**Audible ID:** {final_audible_id}\n\n")
+        f.write(f"**Audible ID:** [{final_audible_id}](https://www.audible.com/pd/{final_audible_id})\n\n")
         f.write("| Chapter | Start Time | Seconds |\n")
         f.write("| :--- | :--- | :--- |\n")
         for item in output_data:
