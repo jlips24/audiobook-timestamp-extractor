@@ -39,7 +39,7 @@ python3 -m src.main <path_to_epub> <path_to_audio>
 ```
 
 ### Fix Missing Chapters
-If some chapters were not found during the initial run, use this mode to search for them specifically.
+If some chapters were not found during the initial run, use this mode to search for them specifically. This lowers the matching confidence to increase the chances of finding a match for the missing chapters.
 ```bash
 python3 -m src.main <path_to_epub> <path_to_audio> --find-missing
 ```
