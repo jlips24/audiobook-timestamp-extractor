@@ -23,9 +23,9 @@ def parse_timestamp_to_seconds(ts_str: str) -> float:
 
 def sync_md_to_json(project_dir: pathlib.Path):
     """
-    Reads chapter_timestamps.md and overwrites chapter_timestamps.json
+    Reads README.md and overwrites chapter_timestamps.json
     """
-    md_path = project_dir / "chapter_timestamps.md"
+    md_path = project_dir / "README.md"
     json_path = project_dir / "chapter_timestamps.json"
 
     if not md_path.exists():
@@ -94,10 +94,10 @@ def sync_md_to_json(project_dir: pathlib.Path):
 
 def sync_json_to_md(project_dir: pathlib.Path):
     """
-    Reads chapter_timestamps.json and updates chapter_timestamps.md.
+    Reads chapter_timestamps.json and updates README.md.
     Preserves existing MD headers if possible.
     """
-    md_path = project_dir / "chapter_timestamps.md"
+    md_path = project_dir / "README.md"
     json_path = project_dir / "chapter_timestamps.json"
 
     if not json_path.exists():

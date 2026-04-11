@@ -77,7 +77,7 @@ def save_results(valid_chapters, final_author, final_title, final_audible_id):
         json.dump(output_data, f, indent=4)
 
     # 2. Markdown Table
-    md_path = output_dir / "chapter_timestamps.md"
+    md_path = output_dir / "README.md"
     with open(md_path, "w") as f:
         f.write("# Chapter Timestamps\n")
         f.write(f"**Book:** {final_title}\n")

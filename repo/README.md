@@ -11,11 +11,11 @@ repo/
 └── <Author Name>/
     └── <Book Title> [<Audible ID>]/
         ├── chapter_timestamps.json
-        └── chapter_timestamps.md
+        └── README.md
 ```
 
 - **`chapter_timestamps.json`**: A machine-readable JSON file containing the chapter titles, start times, and total seconds.
-- **`chapter_timestamps.md`**: A human-readable Markdown file containing the same information in a table format, along with book metadata.
+- **`README.md`**: A human-readable Markdown file containing the same information in a table format, along with book metadata. This file is automatically rendered by platforms like GitHub when viewing the book directory.
 
 ## Contributing Process
 
