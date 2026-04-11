@@ -21,6 +21,8 @@ def find_project_by_id(audible_id: str) -> Optional[pathlib.Path]:
 
     candidates = []
     for author_dir in base_repo.iterdir():
+        if not author_dir.is_dir():
+            continue
         for project_dir in author_dir.iterdir():
             if not project_dir.is_dir() or project_dir.name.startswith('.'):
                 continue
